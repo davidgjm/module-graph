@@ -1,10 +1,10 @@
 package com.davidgjm.oss.maven.domain;
 
 import com.davidgjm.oss.maven.GraphNode;
-import org.neo4j.ogm.annotation.GraphId;
-import org.neo4j.ogm.annotation.NodeEntity;
-import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.annotation.*;
+import org.springframework.util.StringUtils;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -15,12 +15,20 @@ import java.util.Objects;
 @NodeEntity
 public class Module implements GraphNode {
 
+    private static final String COMPOSITE_KEY_PATTERN = "{0}:{1}";
+
     @GraphId
     private Long id;
+    @Index
     private String group;
+    @Index
     private String artifact;
     private String version;
+    @Index
     private String name;
+
+    @Index(unique = true, primary = true)
+    private String compositeId;
 
     @Relationship(type = "PARENT")
     private Module parent;
@@ -32,6 +40,11 @@ public class Module implements GraphNode {
         this.group = group;
         this.artifact = artifact;
         this.version = version;
+        refreshCompositeId();
+    }
+
+    public Module(String group, String artifact) {
+        this(group, artifact, null);
     }
 
     public Module() {
@@ -41,12 +54,17 @@ public class Module implements GraphNode {
         return id;
     }
 
+    public String getCompositeId() {
+        return compositeId;
+    }
+
     public String getGroup() {
         return group;
     }
 
     public void setGroup(String group) {
         this.group = group;
+        refreshCompositeId();
     }
 
     public String getArtifact() {
@@ -55,6 +73,7 @@ public class Module implements GraphNode {
 
     public void setArtifact(String artifact) {
         this.artifact = artifact;
+        refreshCompositeId();
     }
 
     public String getVersion() {
@@ -89,6 +108,17 @@ public class Module implements GraphNode {
         Objects.requireNonNull(module);
         if(!dependencies.contains(module))
         this.dependencies.add(module);
+    }
+
+    private void refreshCompositeId() {
+        if (!StringUtils.hasText(group)) {
+            throw new IllegalStateException("Group id is required!");
+        }
+        if (!StringUtils.hasText(artifact)) {
+            throw new IllegalStateException("Artifact id is required!");
+        }
+
+        this.compositeId = MessageFormat.format(COMPOSITE_KEY_PATTERN, group, artifact);
     }
 
     @Override

@@ -11,5 +11,10 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface ModuleRepository extends GraphRepository<Module> {
+    /**
+     * Finds all module nodes from graph db with paging feature
+     * @param pageable Paging settings
+     * @return Available modules
+     */
     Page<Module> findAll(Pageable pageable);
 }

@@ -110,7 +110,7 @@ public class Module implements GraphNode {
         this.dependencies.add(module);
     }
 
-    private void refreshCompositeId() {
+    public void refreshCompositeId() {
         if (!StringUtils.hasText(group)) {
             throw new IllegalStateException("Group id is required!");
         }

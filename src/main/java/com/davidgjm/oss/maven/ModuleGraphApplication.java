@@ -2,10 +2,12 @@ package com.davidgjm.oss.maven;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Import;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.neo4j.repository.config.EnableNeo4jRepositories;
 
 @SpringBootApplication
-@Import(ApplicationConfig.class)
+@EnableNeo4jRepositories
+@EntityScan(basePackages = "com.davidgjm.oss.maven.domain")
 public class ModuleGraphApplication {
 
 	public static void main(String[] args) {

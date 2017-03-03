@@ -13,6 +13,7 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -20,6 +21,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -31,9 +33,10 @@ import java.util.stream.Collectors;
  * </div>
  */
 @Service
-public class PomParseServiceImpl implements PomParseService{
+public class SimplePomParseServiceImpl implements PomParseService {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
+    private final XPathFactory xPathFactory = XPathFactory.newInstance();
 
     @Override
     public Module parse(Path pomFile) throws IOException {
@@ -55,8 +58,10 @@ public class PomParseServiceImpl implements PomParseService{
             groupId = parent.getGroupId();
         }
 
+        Module module = new Module(groupId, artifactId);
+        Optional<String> versionOptional = getVersion(projectElement);
+        versionOptional.ifPresent(module::setVersion);
 
-        Module module = new Module();
         if (parent != null) {
             module.setParent(parent.toModule());
         }
@@ -73,6 +78,31 @@ public class PomParseServiceImpl implements PomParseService{
     }
     private String getArtifactId(Element node) {
         return node.getElementsByTagName("artifactId").item(0).getTextContent();
+    }
+    private Optional<String> getVersion(Element node) {
+        NodeList versionList = node.getElementsByTagName("version");
+        if (versionList.getLength() ==0) {
+            return Optional.empty();
+        }
+        return Optional.of(versionList.item(0).getTextContent().trim());
+    }
+
+    private NodeList parseByXpath(Document document, String exp) {
+        XPath xPath = xPathFactory.newXPath();
+        XPathExpression expression = null;
+        try {
+            expression = xPath.compile(exp);
+        } catch (XPathExpressionException e) {
+            throw new RuntimeException(e);
+        }
+
+        NodeList nodeList;
+        try {
+            nodeList= (NodeList) expression.evaluate(document, XPathConstants.NODESET);
+        } catch (XPathExpressionException e) {
+            throw new RuntimeException(e);
+        }
+        return nodeList;
     }
 
     private Document doParseXml(Path file) throws ParserConfigurationException, IOException, SAXException {
@@ -92,24 +122,23 @@ public class PomParseServiceImpl implements PomParseService{
 
     private Artifact parseArtifact(Element node) {
         Artifact artifact = new Artifact();
-        artifact.setGroupId(node.getElementsByTagName("groupId").item(0).getTextContent().trim());
-        artifact.setArtifactId(node.getElementsByTagName("artifactId").item(0).getTextContent().trim());
-        NodeList versionList = node.getElementsByTagName("version");
-        if (versionList.getLength() ==1) {
-            artifact.setVersion(versionList.item(0).getTextContent().trim());
-        }
+        artifact.setGroupId(getGroupId(node).trim());
+        artifact.setArtifactId(getArtifactId(node).trim());
+        Optional<String> optional = getVersion(node);
+        optional.ifPresent(artifact::setVersion);
         return artifact;
     }
 
     private List<Artifact> loadDependencies(Document document) {
         List<Artifact> dependencies = new ArrayList<>();
+
         NodeList depList=document.getElementsByTagName("dependencies");
         if (depList.getLength() == 0) {
             logger.warn("No dependencies defined!" );
             return dependencies;
         }
-        Element dependenciesElement = (Element) depList.item(0);
-        NodeList nodeList=dependenciesElement.getElementsByTagName("dependencies");
+        NodeList nodeList = parseByXpath(document, "//dependencies/dependency");
+
         int length = nodeList.getLength();
         logger.trace("Found {} dependency elements.",length );
 

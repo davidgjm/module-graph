@@ -23,7 +23,7 @@ import static org.junit.Assert.fail;
  * Time: 9:17 <br>
  * </div>
  */
-public class PomParseServiceImplTest extends BaseTest{
+public class SimplePomParseServiceImplTest extends BaseTest{
     private final Logger logger = LoggerFactory.getLogger(getClass());
     @Autowired
     private PomParseService service;

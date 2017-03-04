@@ -109,7 +109,7 @@ public class Artifact implements Serializable{
 
     @Override
     public String toString() {
-        return new StringJoiner(", ", this.getClass().getSimpleName() + "[", "]")
+        return new StringJoiner(", ", "[", "]")
                 .add("artifactId = " + artifactId)
                 .add("groupId = " + groupId)
                 .add("version = " + version)

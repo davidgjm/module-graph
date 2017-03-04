@@ -1,5 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
+import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 
 import java.nio.file.Path;
@@ -23,5 +24,21 @@ public interface PomParseService {
      */
     Module parse(Path pomFile);
 
-
+    /**
+     * Tries to parse the given artifact from remote public Maven repositories.
+     * <p>
+     * If the version information is missing, the latest release will be used instead.
+     * Also, the pom files will be downloaded to local temp directory for caching. If the corresponding pom file has already been
+     * downloaded previous, the local version will be used directly.
+     * </p>
+     *
+     * <p>
+     *     <b>Note:</b>
+     *     <br/>
+     *     The parsed content for the artifact will also be cached locally to the yaml file.
+     * </p>
+     * @param artifact The artifact whose pom definition will be retrieved remotely
+     * @return The parsed module
+     */
+    Module parseRemote(Artifact artifact);
 }

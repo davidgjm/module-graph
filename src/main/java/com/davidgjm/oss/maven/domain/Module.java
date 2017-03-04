@@ -110,7 +110,7 @@ public class Module implements GraphNode {
         this.dependencies.add(module);
     }
 
-    public void refreshCompositeId() {
+    private void refreshCompositeId() {
         if (!StringUtils.hasText(group)) {
             throw new IllegalStateException("Group id is required!");
         }
@@ -119,6 +119,10 @@ public class Module implements GraphNode {
         }
 
         this.compositeId = MessageFormat.format(COMPOSITE_KEY_PATTERN, group, artifact);
+    }
+
+    public Artifact toArtifact() {
+        return new Artifact(group, artifact, version);
     }
 
     @Override

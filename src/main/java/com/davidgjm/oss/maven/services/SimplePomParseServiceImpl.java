@@ -2,9 +2,14 @@ package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
+import com.davidgjm.oss.maven.domain.RemotePomFile;
+import com.davidgjm.oss.maven.providers.RemoteRepositoryProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -14,10 +19,16 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -33,20 +44,25 @@ import java.util.stream.Collectors;
  * </div>
  */
 @Service
+@Lazy
 public class SimplePomParseServiceImpl implements PomParseService {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
     private final XPathFactory xPathFactory = XPathFactory.newInstance();
+    private final Path localPomCacheDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "pom-cache");
+
+    private RemoteRepositoryProvider remoteRepositoryProvider;
+
+    @Autowired
+    @Lazy
+    public void setRemoteRepositoryProvider(RemoteRepositoryProvider remoteRepositoryProvider) {
+        this.remoteRepositoryProvider = remoteRepositoryProvider;
+    }
 
     @Override
     public Module parse(Path pomFile) {
         logger.debug("{} - Parsing pom file: {}",getClass().getName(), pomFile);
-        Document document = null;
-        try {
-            document = doParseXml(pomFile);
-        } catch (ParserConfigurationException | SAXException | IOException e) {
-            throw new RuntimeException(e);
-        }
+        Document document = doParseXml(pomFile);
         if (document == null) {
             throw new IllegalStateException("Failed to parse provided file: " + pomFile);
         }
@@ -54,6 +70,55 @@ public class SimplePomParseServiceImpl implements PomParseService {
         logger.debug("{} - Parsing xml document...",getClass().getName());
         return doParseXmlDocument(document);
     }
+
+    @Override
+    public Module parseRemote(Artifact artifact) {
+        Objects.requireNonNull(artifact);
+        if (!StringUtils.hasText(artifact.getGroupId()) || !StringUtils.hasText(artifact.getArtifactId())) {
+            throw new IllegalArgumentException("The groupId and artifactId fields are required!");
+        }
+
+        RemotePomFile remotePomFile = remoteRepositoryProvider.getRemoteArtifactPom(artifact);
+
+        /*
+         * The cached version will be checked first. If the pom is not cached, the remote file will be retrieved.
+         */
+        if (!isCached(remotePomFile)) {
+            logger.debug("{} - Pom file is not cached for {}:{}",getClass().getName(), artifact.getGroupId(), artifact.getArtifactId());
+            //The file is not cached. Reading remotely.
+            try {
+                InputStream inputStream = fetchRemotePomContent(remotePomFile);
+                BufferedReader reader=new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+                saveRemotePom(remotePomFile, reader.lines().collect(Collectors.toList()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return parse(getCachedPomFile(remotePomFile));
+    }
+
+    private InputStream fetchRemotePomContent(RemotePomFile pomFile) throws IOException {
+        URL pomUrl = pomFile.toAbsoluteUrl();
+        logger.info("Fetching remote pom [{}]", pomUrl);
+        return pomUrl.openStream();
+    }
+
+    private Path getCachedPomFile(RemotePomFile pomFile) {
+        return Paths.get(localPomCacheDirectory.toString(), pomFile.getPomPath());
+    }
+
+    private boolean isCached(RemotePomFile pomFile) {
+        return Files.exists(getCachedPomFile(pomFile));
+    }
+
+    private void saveRemotePom(RemotePomFile pomFile, List<String> lines) throws IOException {
+        Path cachedPomFile = getCachedPomFile(pomFile);
+        logger.debug("{} - Caching remote pom to [{}]",getClass().getName(), cachedPomFile);
+        Files.createDirectories(cachedPomFile.getParent());
+        Files.write(cachedPomFile, lines);
+    }
+
 
     private Module doParseXmlDocument(Document document) {
         Element projectElement = document.getDocumentElement();
@@ -114,9 +179,22 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return nodeList;
     }
 
-    private Document doParseXml(Path file) throws ParserConfigurationException, IOException, SAXException {
+    private Document doParseXml(Path file){
         validateXmlFile(file);
-        return getDocumentBuilder().parse(file.toFile());
+        try {
+            return getDocumentBuilder().parse(file.toFile());
+        } catch (SAXException | IOException | ParserConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Document doParseXml(InputStream inputStream){
+        Objects.requireNonNull(inputStream);
+        try {
+            return getDocumentBuilder().parse(inputStream);
+        } catch (SAXException | IOException | ParserConfigurationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Artifact getParent(Document document) {
@@ -165,17 +243,17 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return dependencies;
     }
 
-    private void validateXmlFile(Path file) throws NoSuchFileException {
+    private void validateXmlFile(Path file) {
         Objects.requireNonNull(file);
         if (Files.notExists(file)) {
             logger.error("File does not exist: {}",file );
-            throw new NoSuchFileException(file.toString());
+            throw new RuntimeException(new NoSuchFileException(file.toString()));
         }
         if (Files.isDirectory(file)) {
             throw new IllegalStateException("An xml file is expected! "+file);
         }
         logger.debug("Provided file: [{}]",file );
-        if (!file.getFileName().endsWith("pom.xml") && !file.getFileName().endsWith(".pom")) {
+        if (!file.getFileName().endsWith("pom.xml") && !file.getFileName().toString().endsWith(".pom")) {
             throw new IllegalArgumentException("The file is not a Maven pom.xml!");
         }
     }

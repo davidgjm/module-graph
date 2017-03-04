@@ -39,14 +39,23 @@ public class SimplePomParseServiceImpl implements PomParseService {
     private final XPathFactory xPathFactory = XPathFactory.newInstance();
 
     @Override
-    public Module parse(Path pomFile) throws IOException {
+    public Module parse(Path pomFile) {
+        logger.debug("{} - Parsing pom file: {}",getClass().getName(), pomFile);
         Document document = null;
         try {
             document = doParseXml(pomFile);
-        } catch (ParserConfigurationException | SAXException e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             throw new RuntimeException(e);
         }
+        if (document == null) {
+            throw new IllegalStateException("Failed to parse provided file: " + pomFile);
+        }
 
+        logger.debug("{} - Parsing xml document...",getClass().getName());
+        return doParseXmlDocument(document);
+    }
+
+    private Module doParseXmlDocument(Document document) {
         Element projectElement = document.getDocumentElement();
 
         Artifact parent = getParent(document);
@@ -166,7 +175,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
             throw new IllegalStateException("An xml file is expected! "+file);
         }
         logger.debug("Provided file: [{}]",file );
-        if (!file.getFileName().endsWith("pom.xml")) {
+        if (!file.getFileName().endsWith("pom.xml") && !file.getFileName().endsWith(".pom")) {
             throw new IllegalArgumentException("The file is not a Maven pom.xml!");
         }
     }

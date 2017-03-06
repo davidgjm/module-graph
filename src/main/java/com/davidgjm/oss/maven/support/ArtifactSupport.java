@@ -1,5 +1,6 @@
 package com.davidgjm.oss.maven.support;
 
+import com.davidgjm.oss.maven.ArtifactEntity;
 import com.davidgjm.oss.maven.domain.Artifact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +68,17 @@ public final class ArtifactSupport {
                 version,
                 getArtifactPomFileName(artifactId, version)
                 );
+    }
+
+    public static <T extends ArtifactEntity> String getCompositeId(T artifact) {
+        Objects.requireNonNull(artifact);
+        StringBuilder keyBuilder = new StringBuilder(String.format("%s:%s",
+                artifact.getGroupId(),
+                artifact.getArtifactId()));
+        if (StringUtils.hasText(artifact.getVersion())) {
+            keyBuilder.append(":").append(artifact.getVersion());
+        }
+        return keyBuilder.toString();
     }
 
     private static void validateGroupId(String groupId) {

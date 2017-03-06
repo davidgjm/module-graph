@@ -1,5 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
+import com.davidgjm.oss.maven.ArtifactEntity;
 import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -127,14 +129,28 @@ public class SimplePomParseServiceImpl implements PomParseService {
 
         //sets artifact id
         String artifactId = getArtifactId(projectElement);
-        String groupId = getGroupId(projectElement);
-        if (groupId == null && parent!=null) {
+        Optional<String> groupIdOptional = getGroupId(projectElement);
+        String groupId = null;
+        if (groupIdOptional.isPresent()) {
+            groupId = groupIdOptional.get();
+        } else if (parent == null) {
+            logger.error("Group id is missing and nowhere to inherit. [{}]!", artifactId);
+            throw new IllegalStateException("Failed to get groupId for " + artifactId);
+        } else {
             groupId = parent.getGroupId();
         }
+
 
         Module module = new Module(groupId, artifactId);
         Optional<String> versionOptional = getVersion(projectElement);
         versionOptional.ifPresent(module::setVersion);
+        //if version is missing from current artifact, it usually inherits from its parent
+        if (parent != null) {
+            module.setVersion(parent.getVersion());
+        }
+
+        //finds artifact name
+        setArtifactName(projectElement, module);
 
         if (parent != null) {
             module.setParent(parent.toModule());
@@ -147,11 +163,43 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return module;
     }
 
-    private String getGroupId(Element node) {
-        return node.getElementsByTagName("groupId").item(0).getTextContent();
+    private  <T extends ArtifactEntity> void setArtifactName(Element container, T module) {
+        Optional<String> nameOptional = getChildElementText(container, "name");
+        nameOptional.ifPresent(module::setName);
+    }
+
+
+
+    private Optional<String> getGroupId(Element node) {
+        return getChildElementText(node, "groupId");
     }
     private String getArtifactId(Element node) {
-        return node.getElementsByTagName("artifactId").item(0).getTextContent();
+        return getChildElementText(node, "artifactId").get();
+    }
+
+    /**
+     * Finds the first descendant element text for the given element.
+     * @param node The node to be searched from
+     * @param tagName The tag name to be matched
+     * @return Optional text value.
+     */
+    private Optional<String> getChildElementText(Element node, String tagName) {
+        NodeList nodeList = node.getElementsByTagName(tagName);
+        if (nodeList == null || nodeList.getLength() == 0) {
+            return Optional.empty();
+        }
+
+        nodeList = node.getChildNodes();
+        int childNodeLen = node.getChildNodes().getLength();
+        for (int i = 0; i < childNodeLen; i++) {
+            Node n=nodeList.item(i);
+            if (n.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) n;
+                if (element.getTagName().equals(tagName))
+                    return Optional.of(element.getTextContent().trim());
+            }
+        }
+        return Optional.empty();
     }
     private Optional<String> getVersion(Element node) {
         NodeList versionList = node.getElementsByTagName("version");
@@ -209,10 +257,13 @@ public class SimplePomParseServiceImpl implements PomParseService {
 
     private Artifact parseArtifact(Element node) {
         Artifact artifact = new Artifact();
-        artifact.setGroupId(getGroupId(node).trim());
+        artifact.setGroupId(getGroupId(node).get().trim());
         artifact.setArtifactId(getArtifactId(node).trim());
         Optional<String> optional = getVersion(node);
         optional.ifPresent(artifact::setVersion);
+
+        //sets name
+        setArtifactName(node, artifact );
         return artifact;
     }
 

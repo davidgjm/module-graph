@@ -1,7 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.BaseTest;
-import com.davidgjm.oss.maven.domain.MavenModuleCacheItem;
 import com.davidgjm.oss.maven.domain.Module;
 import org.junit.After;
 import org.junit.Before;
@@ -13,7 +12,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 /**
@@ -47,9 +45,8 @@ public class ModuleCacheServiceImplTest extends BaseTest {
 
     @Test
     public void save() throws Exception {
-        MavenModuleCacheItem cacheItem=cacheService.save(modules.get(0));
-        assertNotNull(cacheItem);
-        
+        cacheService.save(modules.get(0));
+
     }
 
     @Test

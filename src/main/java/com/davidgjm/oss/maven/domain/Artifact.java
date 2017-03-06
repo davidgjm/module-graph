@@ -1,5 +1,10 @@
 package com.davidgjm.oss.maven.domain;
 
+import com.davidgjm.oss.maven.ArtifactEntity;
+import org.hibernate.validator.constraints.NotBlank;
+import org.springframework.util.StringUtils;
+
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.StringJoiner;
@@ -13,10 +18,17 @@ import java.util.StringJoiner;
  * </div>
  */
 
-public class Artifact implements Serializable{
+public class Artifact implements Serializable, ArtifactEntity{
+    @NotNull
+    @NotBlank
     private String groupId;
+    @NotNull
+    @NotBlank
     private String artifactId;
+    @NotBlank
     private String version;
+    @NotBlank
+    private String name;
 
     public Artifact(String groupId, String artifactId, String version) {
         this.groupId = groupId;
@@ -51,7 +63,9 @@ public class Artifact implements Serializable{
     }
 
     public Module toModule() {
-        return new Module(groupId, artifactId, version);
+        Module module= new Module(groupId, artifactId, version);
+        module.setName(name);
+        return module;
     }
 
     /**
@@ -88,6 +102,22 @@ public class Artifact implements Serializable{
      */
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String toCompositeId() {
+        String compositeId=String.format("%s:%s", groupId, artifactId);
+        if (StringUtils.hasText(version)) {
+            compositeId = compositeId + ":" + version;
+        }
+        return compositeId;
     }
 
     @Override

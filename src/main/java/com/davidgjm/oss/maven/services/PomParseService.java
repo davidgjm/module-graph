@@ -2,7 +2,9 @@ package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
+import org.hibernate.validator.constraints.NotBlank;
 
+import javax.validation.constraints.NotNull;
 import java.nio.file.Path;
 
 /**
@@ -41,4 +43,12 @@ public interface PomParseService {
      * @return The parsed module
      */
     Module parseRemote(Artifact artifact);
+
+    default Module parseRemote(@NotNull @NotBlank String groupId, @NotNull @NotBlank String artifactId, @NotBlank String version){
+        return parseRemote(new Artifact(groupId, artifactId, version));
+    }
+
+    default Module parseRemote(@NotNull @NotBlank String groupId, @NotNull @NotBlank String artifactId) {
+        return parseRemote(groupId, artifactId, null);
+    }
 }

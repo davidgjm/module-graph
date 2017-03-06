@@ -1,7 +1,11 @@
 package com.davidgjm.oss.maven.domain;
 
+import com.davidgjm.oss.maven.ArtifactEntity;
 import com.davidgjm.oss.maven.GraphNode;
-import org.neo4j.ogm.annotation.*;
+import org.neo4j.ogm.annotation.GraphId;
+import org.neo4j.ogm.annotation.Index;
+import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Relationship;
 import org.springframework.util.StringUtils;
 
 import java.text.MessageFormat;
@@ -13,16 +17,16 @@ import java.util.Objects;
  * Created by david on 2017/3/1.
  */
 @NodeEntity
-public class Module implements GraphNode {
+public class Module implements GraphNode,ArtifactEntity {
 
     private static final String COMPOSITE_KEY_PATTERN = "{0}:{1}";
 
     @GraphId
     private Long id;
     @Index
-    private String group;
+    private String groupId;
     @Index
-    private String artifact;
+    private String artifactId;
     private String version;
     @Index
     private String name;
@@ -36,15 +40,15 @@ public class Module implements GraphNode {
     @Relationship(type = "DEPEND_ON")
     private final List<Module> dependencies = new ArrayList<>();
 
-    public Module(String group, String artifact, String version) {
-        this.group = group;
-        this.artifact = artifact;
+    public Module(String groupId, String artifactId, String version) {
+        this.groupId = groupId;
+        this.artifactId = artifactId;
         this.version = version;
         refreshCompositeId();
     }
 
-    public Module(String group, String artifact) {
-        this(group, artifact, null);
+    public Module(String groupId, String artifactId) {
+        this(groupId, artifactId, null);
     }
 
     public Module() {
@@ -58,21 +62,21 @@ public class Module implements GraphNode {
         return compositeId;
     }
 
-    public String getGroup() {
-        return group;
+    public String getGroupId() {
+        return groupId;
     }
 
-    public void setGroup(String group) {
-        this.group = group;
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
         refreshCompositeId();
     }
 
-    public String getArtifact() {
-        return artifact;
+    public String getArtifactId() {
+        return artifactId;
     }
 
-    public void setArtifact(String artifact) {
-        this.artifact = artifact;
+    public void setArtifactId(String artifactId) {
+        this.artifactId = artifactId;
         refreshCompositeId();
     }
 
@@ -111,18 +115,20 @@ public class Module implements GraphNode {
     }
 
     private void refreshCompositeId() {
-        if (!StringUtils.hasText(group)) {
+        if (!StringUtils.hasText(groupId)) {
             throw new IllegalStateException("Group id is required!");
         }
-        if (!StringUtils.hasText(artifact)) {
+        if (!StringUtils.hasText(artifactId)) {
             throw new IllegalStateException("Artifact id is required!");
         }
 
-        this.compositeId = MessageFormat.format(COMPOSITE_KEY_PATTERN, group, artifact);
+        this.compositeId = MessageFormat.format(COMPOSITE_KEY_PATTERN, groupId, artifactId);
     }
 
     public Artifact toArtifact() {
-        return new Artifact(group, artifact, version);
+        Artifact a= new Artifact(groupId, artifactId, version);
+        a.setName(name);
+        return a;
     }
 
     @Override
@@ -132,15 +138,15 @@ public class Module implements GraphNode {
 
         Module module = (Module) o;
 
-        if (!getGroup().equals(module.getGroup())) return false;
-        if (!getArtifact().equals(module.getArtifact())) return false;
+        if (!getGroupId().equals(module.getGroupId())) return false;
+        if (!getArtifactId().equals(module.getArtifactId())) return false;
         return getVersion() != null ? getVersion().equals(module.getVersion()) : module.getVersion() == null;
     }
 
     @Override
     public int hashCode() {
-        int result = getGroup().hashCode();
-        result = 31 * result + getArtifact().hashCode();
+        int result = getGroupId().hashCode();
+        result = 31 * result + getArtifactId().hashCode();
         result = 31 * result + (getVersion() != null ? getVersion().hashCode() : 0);
         return result;
     }
@@ -148,8 +154,8 @@ public class Module implements GraphNode {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("Module{");
-        sb.append("group='").append(group).append('\'');
-        sb.append(", artifact='").append(artifact).append('\'');
+        sb.append("groupId='").append(groupId).append('\'');
+        sb.append(", artifactId='").append(artifactId).append('\'');
         sb.append(", name='").append(name).append('\'');
         sb.append(", version='").append(version).append('\'');
         sb.append('}');

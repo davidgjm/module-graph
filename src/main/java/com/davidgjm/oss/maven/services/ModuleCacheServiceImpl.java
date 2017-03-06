@@ -1,13 +1,12 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.domain.Artifact;
-import com.davidgjm.oss.maven.domain.MavenModuleCacheItem;
 import com.davidgjm.oss.maven.domain.Module;
+import com.davidgjm.oss.maven.support.ArtifactSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.PostConstruct;
@@ -32,7 +31,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     private static final String CACHE_FILE_NAME = "module-cache.yml";
     private final Logger logger= LoggerFactory.getLogger(getClass());
     private final Path cacheFile;
-    private final Map<String, MavenModuleCacheItem> cache = new ConcurrentHashMap<>();
+    private final Map<String, Module> cache = new ConcurrentHashMap<>();
 
     public ModuleCacheServiceImpl() {
         cacheFile = Paths.get(System.getProperty("user.home"), ".model-graph", CACHE_FILE_NAME);
@@ -57,7 +56,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
         If the cache file does not exist, create a new one. Otherwise, load the content into cache.
          */
         Yaml yaml = new Yaml();
-        Map<String, MavenModuleCacheItem> cached = (Map<String, MavenModuleCacheItem>) yaml.load(Files.newInputStream(cacheFile));
+        Map<String, Module> cached = (Map<String, Module>) yaml.load(Files.newInputStream(cacheFile));
         if (cached != null) {
             cache.putAll(cached);
         }
@@ -66,30 +65,14 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
 
 
     @Override
-    public MavenModuleCacheItem save(Module module) {
+    public void save(Module module) {
         Objects.requireNonNull(module);
-        MavenModuleCacheItem cacheItem = new MavenModuleCacheItem(module.toArtifact());
-        cacheItem.setParent(module.getParent().toArtifact());
-        cacheItem.setDependencies(module.getDependencies().stream()
-            .map(Module::toArtifact)
-            .collect(Collectors.toList()));
-        doPutCacheItem(cacheItem);
-        return cacheItem;
+        doPutCacheItem(module);
     }
 
-    private String getKey(Artifact artifact) {
-        StringBuilder keyBuilder = new StringBuilder(String.format("%s:%s",
-                artifact.getGroupId(),
-                artifact.getArtifactId()));
-        if (StringUtils.hasText(artifact.getVersion())) {
-            keyBuilder.append(":").append(artifact.getVersion());
-        }
-        return keyBuilder.toString();
-    }
 
-    private void doPutCacheItem(MavenModuleCacheItem cacheItem) {
-        Artifact project = cacheItem.getProject();
-        String key = getKey(project);
+    private void doPutCacheItem(Module cacheItem) {
+        String key = ArtifactSupport.getCompositeId(cacheItem);
         cache.put(key, cacheItem);
         writeToFile();
     }
@@ -111,7 +94,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
         Objects.requireNonNull(module);
         Artifact artifact = module.toArtifact();
         logger.debug("{} - Removing artifact from cache: {}",getClass().getName(), artifact);
-        cache.remove(getKey(artifact));
+        cache.remove(ArtifactSupport.getCompositeId(module));
         writeToFile();
     }
 
@@ -122,22 +105,22 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     }
 
     @Override
-    public List<MavenModuleCacheItem> findAll() {
+    public List<Module> findAll() {
         return cache.values().parallelStream().collect(Collectors.toList());
     }
 
     @Override
     public Optional<Module> find(Artifact artifact) {
         Objects.requireNonNull(artifact);
-        String key = getKey(artifact);
+        String key = ArtifactSupport.getCompositeId(artifact);
         if (!cache.containsKey(key)) {
             logger.warn("Artifact not found in cache: {}",key);
             return Optional.empty();
         }
-        MavenModuleCacheItem cacheItem = cache.get(key);
+        Module cacheItem = cache.get(key);
         if (cacheItem == null) {
             return Optional.empty();
         }
-        return Optional.of(cacheItem.toModule());
+        return Optional.of(cacheItem);
     }
 }

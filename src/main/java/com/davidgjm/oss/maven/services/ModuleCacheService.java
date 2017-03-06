@@ -1,7 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.domain.Artifact;
-import com.davidgjm.oss.maven.domain.MavenModuleCacheItem;
 import com.davidgjm.oss.maven.domain.Module;
 
 import java.util.List;
@@ -12,13 +11,13 @@ import java.util.Optional;
  */
 public interface ModuleCacheService {
 
-    MavenModuleCacheItem save(Module module);
+    void save(Module module);
 
     void remove(Module module);
 
     void clear();
 
-    List<MavenModuleCacheItem> findAll();
+    List<Module> findAll();
 
     /**
      * Locates the artifact from the cache.

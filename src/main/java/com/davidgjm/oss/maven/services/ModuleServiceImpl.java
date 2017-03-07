@@ -28,12 +28,14 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public Module save(@NotNull @Valid Module module) {
+        module.refreshCompositeId();
         return repository.save(module);
     }
 
     @Override
     public void save(@NotNull @Valid List<Module> modules) {
-        repository.save(modules);
+        if (modules.isEmpty()) return;
+        modules.parallelStream().forEach(this::save);
     }
 
     @Override

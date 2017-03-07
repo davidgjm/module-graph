@@ -1,7 +1,6 @@
 package com.davidgjm.oss.maven.support;
 
 import com.davidgjm.oss.maven.ArtifactEntity;
-import com.davidgjm.oss.maven.domain.Artifact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -93,7 +92,7 @@ public final class ArtifactSupport {
         }
     }
 
-    public static void validate(Artifact artifact) {
+    public static <T extends ArtifactEntity> void validate(T artifact) {
         Objects.requireNonNull(artifact);
         validateGroupId(artifact.getGroupId());
         validateArtifactId(artifact.getArtifactId());

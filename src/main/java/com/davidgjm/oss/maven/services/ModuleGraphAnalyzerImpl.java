@@ -1,6 +1,5 @@
 package com.davidgjm.oss.maven.services;
 
-import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.support.ArtifactSupport;
 import org.slf4j.Logger;
@@ -37,26 +36,26 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
     }
 
     @Override
-    public Module analyze(@NotNull @Valid Artifact artifact) {
+    public Module analyze(@NotNull @Valid Module artifact) {
         Objects.requireNonNull(artifact);
         ArtifactSupport.validate(artifact);
         logger.debug("{} - Analyzing artifact [{}]...",getClass().getName(), artifact);
         Module module= doAnalyze(artifact);
         analyzeAncestors(module);
-        if (true) {
-            analyzeDependencies(module);
-        }
+
+        //dependencies are checked at all times for the time being
+        analyzeDependencies(module);
         return module;
     }
 
 
-    private Module doAnalyze(Artifact artifact) {
+    private Module doAnalyze(Module artifact) {
         Optional<Module> moduleOptional = cacheService.find(artifact);
         if (moduleOptional.isPresent()) {
             return moduleOptional.get();
         }
 
-        logger.info("Artifact [{}] not cached. Retrieving from pom...", artifact.toCompositeId());
+        logger.info("Artifact [{}] not cached. Retrieving from pom...", artifact.getCompositeId());
         Module parsedModule = pomParseService.parseRemote(artifact);
         pool.submit(() -> {
             logger.debug("{} - Saving parsed module to cache first [{}]",getClass().getName(), parsedModule.getCompositeId());
@@ -74,7 +73,9 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         }
 
         logger.info("Analyzing parent: [{}]",parent.getCompositeId());
-        parent = doAnalyze(parent.toArtifact());
+        parent = doAnalyze(parent);
+        parent.refreshCompositeId();
+        module.setParent(parent);
         if (parent.getParent() != null) {
             analyzeAncestors(parent.getParent());
         }

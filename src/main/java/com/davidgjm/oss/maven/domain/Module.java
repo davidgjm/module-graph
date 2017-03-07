@@ -2,13 +2,13 @@ package com.davidgjm.oss.maven.domain;
 
 import com.davidgjm.oss.maven.ArtifactEntity;
 import com.davidgjm.oss.maven.GraphNode;
+import com.davidgjm.oss.maven.support.ArtifactSupport;
 import org.neo4j.ogm.annotation.GraphId;
 import org.neo4j.ogm.annotation.Index;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 import org.springframework.util.StringUtils;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -18,8 +18,6 @@ import java.util.Objects;
  */
 @NodeEntity
 public class Module implements GraphNode,ArtifactEntity {
-
-    private static final String COMPOSITE_KEY_PATTERN = "{0}:{1}";
 
     @GraphId
     private Long id;
@@ -68,7 +66,6 @@ public class Module implements GraphNode,ArtifactEntity {
 
     public void setGroupId(String groupId) {
         this.groupId = groupId;
-        refreshCompositeId();
     }
 
     public String getArtifactId() {
@@ -77,7 +74,6 @@ public class Module implements GraphNode,ArtifactEntity {
 
     public void setArtifactId(String artifactId) {
         this.artifactId = artifactId;
-        refreshCompositeId();
     }
 
     public String getVersion() {
@@ -114,7 +110,7 @@ public class Module implements GraphNode,ArtifactEntity {
         this.dependencies.add(module);
     }
 
-    private void refreshCompositeId() {
+    public void refreshCompositeId() {
         if (!StringUtils.hasText(groupId)) {
             throw new IllegalStateException("Group id is required!");
         }
@@ -122,7 +118,7 @@ public class Module implements GraphNode,ArtifactEntity {
             throw new IllegalStateException("Artifact id is required!");
         }
 
-        this.compositeId = MessageFormat.format(COMPOSITE_KEY_PATTERN, groupId, artifactId);
+        this.compositeId = ArtifactSupport.getCompositeId(this);
     }
 
     public Artifact toArtifact() {

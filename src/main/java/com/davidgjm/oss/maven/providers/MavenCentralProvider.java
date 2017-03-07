@@ -1,6 +1,6 @@
 package com.davidgjm.oss.maven.providers;
 
-import com.davidgjm.oss.maven.domain.Artifact;
+import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
 import com.davidgjm.oss.maven.support.ArtifactSupport;
 import org.springframework.context.annotation.Primary;
@@ -23,7 +23,7 @@ public class MavenCentralProvider extends BaseRemoteRepositoryProvider{
     }
 
     @Override
-    public RemotePomFile getRemoteArtifactPom(Artifact artifact) {
+    public RemotePomFile getRemoteArtifactPom(Module artifact) {
         ArtifactSupport.validate(artifact);
         String version = artifact.getVersion();
         if (!StringUtils.hasText(version)) {

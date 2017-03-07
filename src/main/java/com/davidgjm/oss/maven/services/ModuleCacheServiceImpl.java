@@ -40,16 +40,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     @PostConstruct
     private void doInit() throws IOException, URISyntaxException {
         logger.debug("{} - Cache file: {}",getClass().getName(), cacheFile);
-        if (Files.notExists(cacheFile)) {
-            logger.debug("{} - Cache file does not exist. Creating: [{}]",getClass().getName(), cacheFile);
-            try {
-                Files.createDirectories(cacheFile.getParent());
-                Files.createFile(cacheFile);
-            } catch (IOException e) {
-                logger.error("Failed to create cache file.",e);
-                throw new RuntimeException(e);
-            }
-        }
+        setupCacheFile();
 
         /*
         try to load existing cache first.
@@ -63,6 +54,18 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
         logger.info("{} items loaded from cache", cache.size());
     }
 
+    private void setupCacheFile() {
+        if (Files.notExists(cacheFile)) {
+            logger.debug("{} - Cache file does not exist. Creating: [{}]",getClass().getName(), cacheFile);
+            try {
+                Files.createDirectories(cacheFile.getParent());
+                Files.createFile(cacheFile);
+            } catch (IOException e) {
+                logger.error("Failed to create cache file.",e);
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
     @Override
     public void save(Module module) {
@@ -81,6 +84,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     private void writeToFile() {
         logger.info("Writing cache to file: {}", cacheFile);
         logger.info("Current cache size: {}",cache.size());
+        setupCacheFile();
         Yaml yaml = new Yaml();
         try {
             yaml.dump(cache, Files.newBufferedWriter(cacheFile));
@@ -110,7 +114,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     }
 
     @Override
-    public Optional<Module> find(Artifact artifact) {
+    public Optional<Module> find(Module artifact) {
         Objects.requireNonNull(artifact);
         String key = ArtifactSupport.getCompositeId(artifact);
         if (!cache.containsKey(key)) {

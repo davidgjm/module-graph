@@ -1,6 +1,5 @@
 package com.davidgjm.oss.maven.services;
 
-import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 
 import java.util.List;
@@ -28,5 +27,5 @@ public interface ModuleCacheService {
      * @param artifact The artifact to be located. <code>groupId</code> and <code>artifactId</code> properties are required.
      * @return The optional object containing the matching result.
      */
-    Optional<Module> find(Artifact artifact);
+    Optional<Module> find(Module artifact);
 }

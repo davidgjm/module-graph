@@ -1,7 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.ArtifactEntity;
-import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
 import com.davidgjm.oss.maven.providers.RemoteRepositoryProvider;
@@ -70,11 +69,12 @@ public class SimplePomParseServiceImpl implements PomParseService {
         }
 
         logger.debug("{} - Parsing xml document...",getClass().getName());
+
         return doParseXmlDocument(document);
     }
 
     @Override
-    public Module parseRemote(Artifact artifact) {
+    public Module parseRemote(Module artifact) {
         Objects.requireNonNull(artifact);
         if (!StringUtils.hasText(artifact.getGroupId()) || !StringUtils.hasText(artifact.getArtifactId())) {
             throw new IllegalArgumentException("The groupId and artifactId fields are required!");
@@ -125,7 +125,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
     private Module doParseXmlDocument(Document document) {
         Element projectElement = document.getDocumentElement();
 
-        Artifact parent = getParent(document);
+        Module parent = getParent(document);
 
         //sets artifact id
         String artifactId = getArtifactId(projectElement);
@@ -151,15 +151,10 @@ public class SimplePomParseServiceImpl implements PomParseService {
 
         //finds artifact name
         setArtifactName(projectElement, module);
-
-        if (parent != null) {
-            module.setParent(parent.toModule());
-        }
+        module.setParent(parent);
 
         //set dependencies
-        module.getDependencies().addAll(loadDependencies(document).stream()
-                .map(Artifact::toModule)
-                .collect(Collectors.toList()));
+        module.getDependencies().addAll(loadDependencies(document));
         return module;
     }
 
@@ -174,7 +169,8 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return getChildElementText(node, "groupId");
     }
     private String getArtifactId(Element node) {
-        return getChildElementText(node, "artifactId").get();
+        Optional<String> optional = getChildElementText(node, "artifactId");
+        return optional.orElseThrow(() -> new RuntimeException("No artifact id detected for element: " + node.getTagName()));
     }
 
     /**
@@ -245,37 +241,39 @@ public class SimplePomParseServiceImpl implements PomParseService {
         }
     }
 
-    private Artifact getParent(Document document) {
+    private Module getParent(Document document) {
         NodeList parentList = document.getElementsByTagName("parent");
         if (parentList.getLength() == 0) {
             logger.warn("The project does not declare parent project. Super POM is used." );
             return null;
         }
         Element parentElement = (Element) parentList.item(0);
-        return parseArtifact(parentElement);
+        Module parent= parseArtifact(parentElement);
+        return parent;
     }
 
-    private Artifact parseArtifact(Element node) {
-        Artifact artifact = new Artifact();
-        artifact.setGroupId(getGroupId(node).get().trim());
-        artifact.setArtifactId(getArtifactId(node).trim());
+    private Module parseArtifact(Element node) {
+        Module module = new Module();
+        Optional<String> groupOptional = getGroupId(node);
+        groupOptional.ifPresent(module::setGroupId);
+        module.setArtifactId(getArtifactId(node).trim());
         Optional<String> optional = getVersion(node);
-        optional.ifPresent(artifact::setVersion);
+        optional.ifPresent(module::setVersion);
 
         //sets name
-        setArtifactName(node, artifact );
-        return artifact;
+        setArtifactName(node, module );
+        return module;
     }
 
-    private List<Artifact> loadDependencies(Document document) {
-        List<Artifact> dependencies = new ArrayList<>();
+    private List<Module> loadDependencies(Document document) {
+        List<Module> dependencies = new ArrayList<>();
 
         NodeList depList=document.getElementsByTagName("dependencies");
         if (depList.getLength() == 0) {
             logger.warn("No dependencies defined!" );
             return dependencies;
         }
-        NodeList nodeList = parseByXpath(document, "//dependencies/dependency");
+        NodeList nodeList = parseByXpath(document, "/project/dependencies/dependency");
 
         int length = nodeList.getLength();
         logger.trace("Found {} dependency elements.",length );
@@ -287,7 +285,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
             if (scopeList.getLength()==1 && scopeList.item(0).getTextContent().trim().equalsIgnoreCase("test")) {
                 continue;
             }
-            Artifact artifact = parseArtifact(node);
+            Module artifact = parseArtifact(node);
             dependencies.add(artifact);
         }
 

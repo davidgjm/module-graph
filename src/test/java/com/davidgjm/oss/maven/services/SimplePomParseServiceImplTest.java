@@ -1,7 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.BaseTest;
-import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +47,7 @@ public class SimplePomParseServiceImplTest extends BaseTest{
 
     @Test
     public void pareRemote() throws Exception {
-        Artifact artifact = new Artifact("org.yaml","snakeyaml","1.18");
+        Module artifact = new Module("org.yaml","snakeyaml","1.18");
         Module module = service.parseRemote(artifact);
         assertNotNull(module);
 

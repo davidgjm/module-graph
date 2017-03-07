@@ -1,6 +1,6 @@
 package com.davidgjm.oss.maven.providers;
 
-import com.davidgjm.oss.maven.domain.Artifact;
+import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.support.ArtifactSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +54,7 @@ public abstract class BaseRemoteRepositoryProvider implements RemoteRepositoryPr
      * @param artifact The artifact to be parsed
      * @return The version number for the artifact.
      */
-    protected String parseVersionFromMetadata(Artifact artifact){
+    protected String parseVersionFromMetadata(Module artifact){
         String relativePathToArtifact = ArtifactSupport.getRelativeUrlFragment(artifact.getGroupId(), artifact.getArtifactId());
         logger.debug("{} - Relative artifact: {}",getClass().getName(), relativePathToArtifact);
 
@@ -65,7 +65,7 @@ public abstract class BaseRemoteRepositoryProvider implements RemoteRepositoryPr
         return version;
     }
 
-    private Document parseMavenMetadata(Artifact artifact) {
+    private Document parseMavenMetadata(Module artifact) {
         String relativePathToArtifact = ArtifactSupport.getRelativeUrlFragment(artifact.getGroupId(), artifact.getArtifactId());
 
         String completeUrl = String.format("%s/%s/maven-metadata.xml", baseUrl.toString(), relativePathToArtifact.replace("//","/"))

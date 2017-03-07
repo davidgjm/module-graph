@@ -1,7 +1,7 @@
 package com.davidgjm.oss.maven.providers;
 
 import com.davidgjm.oss.maven.BaseTest;
-import com.davidgjm.oss.maven.domain.Artifact;
+import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,7 +32,7 @@ public class MavenCentralProviderTest extends BaseTest {
 
     @Test
     public void getArtifactUrl() throws Exception {
-        Artifact artifact = new Artifact("org.yaml", "snakeyaml");
+        Module artifact = new Module("org.yaml", "snakeyaml");
 
         RemotePomFile pomFile = provider.getRemoteArtifactPom(artifact);
         assertNotNull(pomFile);

@@ -1,7 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.BaseTest;
-import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 import org.junit.After;
 import org.junit.Before;
@@ -31,7 +30,7 @@ public class ModuleGraphAnalyzerImplTest extends BaseTest {
 
     @Test
     public void analyze_noParentAndNoDeps() throws Exception {
-        Artifact artifact = new Artifact("org.yaml","snakeyaml","1.17");
+        Module artifact = new Module("org.yaml","snakeyaml","1.17");
         Module module = analyzer.analyze(artifact);
         assertNotNull(module);
         System.out.println(module);
@@ -39,7 +38,7 @@ public class ModuleGraphAnalyzerImplTest extends BaseTest {
 
     @Test
     public void analyze_ParentAndNoDeps() throws Exception {
-        Artifact artifact = new Artifact("com.google.guava","guava","20.0");
+        Module artifact = new Module("com.google.guava","guava","20.0");
         Module module = analyzer.analyze(artifact);
         assertNotNull(module);
         System.out.println(module);

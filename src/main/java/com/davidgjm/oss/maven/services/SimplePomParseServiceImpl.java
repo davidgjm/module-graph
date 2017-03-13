@@ -74,7 +74,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
     }
 
     @Override
-    public Module parseRemote(Module artifact) {
+    public Module parse(Module artifact) {
         Objects.requireNonNull(artifact);
         if (!StringUtils.hasText(artifact.getGroupId()) || !StringUtils.hasText(artifact.getArtifactId())) {
             throw new IllegalArgumentException("The groupId and artifactId fields are required!");

@@ -23,6 +23,7 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
     private final Logger logger= LoggerFactory.getLogger(getClass());
     private final ModuleCacheService cacheService;
     private PomParseService pomParseService;
+    private ModuleService moduleService;
     private final ExecutorService pool = Executors.newWorkStealingPool();
 
     @Autowired
@@ -35,6 +36,11 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         this.pomParseService = pomParseService;
     }
 
+    @Autowired
+    public void setModuleService(ModuleService moduleService) {
+        this.moduleService = moduleService;
+    }
+
     @Override
     public Module analyze(@NotNull @Valid Module artifact) {
         Objects.requireNonNull(artifact);
@@ -44,7 +50,8 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         analyzeAncestors(module);
 
         //dependencies are checked at all times for the time being
-        analyzeDependencies(module);
+        analyzeDependencies(module, false);
+        moduleService.save(module);
         return module;
     }
 
@@ -56,7 +63,7 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         }
 
         logger.info("Artifact [{}] not cached. Retrieving from pom...", artifact.getCompositeId());
-        Module parsedModule = pomParseService.parseRemote(artifact);
+        Module parsedModule = pomParseService.parse(artifact);
         pool.submit(() -> {
             logger.debug("{} - Saving parsed module to cache first [{}]",getClass().getName(), parsedModule.getCompositeId());
             cacheService.save(parsedModule);
@@ -76,22 +83,29 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         parent = doAnalyze(parent);
         parent.refreshCompositeId();
         module.setParent(parent);
-        if (parent.getParent() != null) {
-            analyzeAncestors(parent.getParent());
+        Module ancestor = parent.getParent();
+        if (ancestor != null) {
+            ancestor = doAnalyze(ancestor);
+            ancestor.refreshCompositeId();
+            parent.setParent(ancestor);
+            analyzeAncestors(ancestor);
+            logger.debug("{} - Analyzing dependencies for [{}]",getClass().getName(), ancestor.getCompositeId());
+            analyzeDependencies(ancestor, false);
         }
     }
 
-    private void analyzeDependencies(Module module) {
+    private void analyzeDependencies(Module module, boolean recursive) {
         List<Module> dependencies = module.getDependencies();
         if (dependencies == null || dependencies.isEmpty()) {
             logger.info("No dependencies found for module: {}", module.getCompositeId());
             return;
         }
-
-        logger.info("Looking into dependencies for {}",module.getCompositeId());
-        dependencies.parallelStream().forEach(m -> {
-            logger.info("Checking dependency module: [{}]",m.getCompositeId());
-            analyzeDependencies(m);
-        });
+        if (recursive) {
+            logger.info("Looking into dependencies for {}",module.getCompositeId());
+            dependencies.parallelStream().forEach(m -> {
+                logger.info("Checking dependency module: [{}]",m.getCompositeId());
+                analyzeDependencies(m,true);
+            });
+        }
     }
 }

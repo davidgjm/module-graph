@@ -48,7 +48,7 @@ public class SimplePomParseServiceImplTest extends BaseTest{
     @Test
     public void pareRemote() throws Exception {
         Module artifact = new Module("org.yaml","snakeyaml","1.18");
-        Module module = service.parseRemote(artifact);
+        Module module = service.parse(artifact);
         assertNotNull(module);
 
 

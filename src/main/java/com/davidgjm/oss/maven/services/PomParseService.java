@@ -39,5 +39,5 @@ public interface PomParseService {
      * @param artifact The artifact whose pom definition will be retrieved remotely
      * @return The parsed module
      */
-    Module parseRemote(Module artifact);
+    Module parse(Module artifact);
 }

@@ -28,8 +28,41 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public Module save(@NotNull @Valid Module module) {
+        saveGraphTree(module);
+        return saveSingle(module);
+    }
+
+    private Module saveSingle(Module module) {
         module.refreshCompositeId();
         return repository.save(module);
+    }
+
+    private void saveGraphTree(Module module) {
+        //save itself
+        saveSingle(module);
+
+        //save parent
+        saveAncestors(module);
+
+        //save dependencies
+        saveDependencies(module);
+    }
+
+    private void saveAncestors(Module module) {
+        Module parent = module.getParent();
+        if (parent == null) return;
+
+        saveSingle(parent);
+        saveAncestors(parent);
+    }
+
+    private void saveDependencies(Module module) {
+        List<Module> dependencies = module.getDependencies();
+        if (dependencies==null||dependencies.isEmpty()) return;
+        dependencies.parallelStream().forEach(m ->{
+            saveSingle(m);
+            saveDependencies(m);
+        });
     }
 
     @Override

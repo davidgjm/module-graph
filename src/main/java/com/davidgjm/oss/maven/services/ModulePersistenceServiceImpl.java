@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -17,7 +18,7 @@ import java.util.List;
  * Created by david on 2017/3/1.
  */
 @Service
-public class ModuleServiceImpl implements ModuleService {
+public class ModulePersistenceServiceImpl implements ModulePersistenceService {
     private final Logger logger= LoggerFactory.getLogger(getClass());
     private ModuleRepository repository;
 
@@ -26,12 +27,14 @@ public class ModuleServiceImpl implements ModuleService {
         this.repository = repository;
     }
 
+
     @Override
     public Module save(@NotNull @Valid Module module) {
         saveGraphTree(module);
         return saveSingle(module);
     }
 
+    @Transactional
     private Module saveSingle(Module module) {
         module.refreshCompositeId();
         return repository.save(module);

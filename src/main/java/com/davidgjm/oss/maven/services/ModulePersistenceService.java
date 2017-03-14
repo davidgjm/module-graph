@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Created by david on 2017/3/1.
  */
-public interface ModuleService {
+public interface ModulePersistenceService {
 
     Module save(@NotNull @Valid Module module);
 

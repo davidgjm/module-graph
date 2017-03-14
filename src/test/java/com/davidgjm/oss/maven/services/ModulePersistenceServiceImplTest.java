@@ -12,9 +12,9 @@ import static org.junit.Assert.assertNotNull;
 /**
  * Created by david on 2017/3/1.
  */
-public class ModuleServiceImplTest extends BaseTest {
+public class ModulePersistenceServiceImplTest extends BaseTest {
     @Autowired
-    private ModuleService service;
+    private ModulePersistenceService service;
 
     @Before
     public void setUp() throws Exception {

@@ -1,5 +1,6 @@
 package com.davidgjm.oss.maven.services;
 
+import com.davidgjm.oss.maven.configuration.AppConfiguration;
 import com.davidgjm.oss.maven.domain.Artifact;
 import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.support.ArtifactSupport;
@@ -32,9 +33,11 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     private final Logger logger= LoggerFactory.getLogger(getClass());
     private final Path cacheFile;
     private final Map<String, Module> cache = new ConcurrentHashMap<>();
+    private final AppConfiguration configuration;
 
-    public ModuleCacheServiceImpl() {
-        cacheFile = Paths.get(System.getProperty("user.home"), ".model-graph", CACHE_FILE_NAME);
+    public ModuleCacheServiceImpl(AppConfiguration configuration) {
+        this.configuration = configuration;
+        cacheFile = Paths.get(configuration.getDataDirectory().toString(), CACHE_FILE_NAME);
     }
 
     @PostConstruct
@@ -71,13 +74,34 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     public void save(Module module) {
         Objects.requireNonNull(module);
         doPutCacheItem(module);
+        writeToFile();
     }
 
 
     private void doPutCacheItem(Module cacheItem) {
-        String key = ArtifactSupport.getCompositeId(cacheItem);
-        cache.put(key, cacheItem);
-        writeToFile();
+        saveModuleItem(cacheItem);
+        saveAncestors(cacheItem);
+        saveDependencies(cacheItem);
+    }
+
+    private void saveModuleItem(Module module) {
+        String key = ArtifactSupport.getCompositeId(module);
+        cache.put(key, module);
+    }
+
+    private void saveAncestors(Module module) {
+        Module parent = module.getParent();
+        if (parent == null) return;
+
+        saveModuleItem(parent);
+        saveAncestors(parent);
+    }
+
+    private void saveDependencies(Module module) {
+        List<Module> dependencies = module.getDependencies();
+        if (dependencies==null || dependencies.isEmpty()) return;
+
+        dependencies.parallelStream().forEach(this::saveDependencies);
     }
 
 

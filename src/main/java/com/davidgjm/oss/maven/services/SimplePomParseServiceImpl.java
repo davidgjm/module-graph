@@ -1,6 +1,7 @@
 package com.davidgjm.oss.maven.services;
 
 import com.davidgjm.oss.maven.ArtifactEntity;
+import com.davidgjm.oss.maven.configuration.AppConfiguration;
 import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
 import com.davidgjm.oss.maven.providers.RemoteRepositoryProvider;
@@ -50,9 +51,15 @@ public class SimplePomParseServiceImpl implements PomParseService {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
     private final XPathFactory xPathFactory = XPathFactory.newInstance();
-    private final Path localPomCacheDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "pom-cache");
+    private final Path localPomCacheDirectory;
 
     private RemoteRepositoryProvider remoteRepositoryProvider;
+    private final AppConfiguration configuration;
+
+    public SimplePomParseServiceImpl(AppConfiguration configuration) {
+        this.configuration = configuration;
+        localPomCacheDirectory = Paths.get(configuration.getDataDirectory().toString(), "pom-cache");
+    }
 
     @Autowired
     @Lazy
@@ -86,7 +93,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
          * The cached version will be checked first. If the pom is not cached, the remote file will be retrieved.
          */
         if (!isCached(remotePomFile)) {
-            logger.debug("{} - Pom file is not cached for {}:{}",getClass().getName(), artifact.getGroupId(), artifact.getArtifactId());
+            logger.info("{} - Pom file is not cached for {}:{}",getClass().getName(), artifact.getGroupId(), artifact.getArtifactId());
             //The file is not cached. Reading remotely.
             try {
                 InputStream inputStream = fetchRemotePomContent(remotePomFile);

@@ -3,12 +3,16 @@ package com.davidgjm.oss.maven.domain;
 import com.davidgjm.oss.maven.ArtifactEntity;
 import com.davidgjm.oss.maven.GraphNode;
 import com.davidgjm.oss.maven.support.ArtifactSupport;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.hibernate.validator.constraints.NotBlank;
 import org.neo4j.ogm.annotation.GraphId;
 import org.neo4j.ogm.annotation.Index;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
 import org.springframework.util.StringUtils;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -21,20 +25,32 @@ public class Module implements GraphNode,ArtifactEntity {
 
     @GraphId
     private Long id;
+
+    @NotNull
+    @NotBlank
     @Index
     private String groupId;
+
+    @NotNull
+    @NotBlank
     @Index
     private String artifactId;
+
+    @NotBlank
     private String version;
+    @NotBlank
     @Index
     private String name;
 
+    @JsonIgnore
     @Index(unique = true, primary = true)
     private String compositeId;
 
+    @Valid
     @Relationship(type = "PARENT")
     private Module parent;
 
+    @Valid
     @Relationship(type = "DEPEND_ON")
     private final List<Module> dependencies = new ArrayList<>();
 

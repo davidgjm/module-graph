@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -50,7 +50,7 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         analyzeAncestors(module);
 
         //dependencies are checked at all times for the time being
-        analyzeDependencies(module, false);
+        analyzeDependencies(module, true);
         modulePersistenceService.save(module);
         return module;
     }
@@ -84,13 +84,13 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         parent.refreshCompositeId();
         module.setParent(parent);
 
-        analyzeDependencies(parent, false);
+        analyzeDependencies(parent, true);
         analyzeAncestors(parent);
     }
 
     private void analyzeDependencies(Module module, boolean recursive) {
         if(module ==null)return;
-        List<Module> dependencies = module.getDependencies();
+        Set<Module> dependencies = module.getDependencies();
         if (dependencies == null || dependencies.isEmpty()) {
             logger.info("No dependencies found for module: {}", module.getCompositeId());
             return;
@@ -99,6 +99,7 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
             logger.info("Looking into dependencies for {}",module.getCompositeId());
             dependencies.parallelStream().forEach(m -> {
                 logger.info("Checking dependency module: [{}]",m.getCompositeId());
+                m.refreshCompositeId();
                 analyzeDependencies(m,true);
             });
         }

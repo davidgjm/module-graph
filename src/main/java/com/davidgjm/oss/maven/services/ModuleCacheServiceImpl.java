@@ -16,10 +16,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -98,7 +95,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
     }
 
     private void saveDependencies(Module module) {
-        List<Module> dependencies = module.getDependencies();
+        Set<Module> dependencies = module.getDependencies();
         if (dependencies==null || dependencies.isEmpty()) return;
 
         dependencies.parallelStream().forEach(this::saveDependencies);

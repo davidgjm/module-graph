@@ -13,9 +13,7 @@ import org.springframework.util.StringUtils;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Created by david on 2017/3/1.
@@ -51,8 +49,8 @@ public class Module implements GraphNode,ArtifactEntity {
     private Module parent;
 
     @Valid
-    @Relationship(type = "DEPEND_ON")
-    private final List<Module> dependencies = new ArrayList<>();
+    @Relationship(type = "DEPENDS_ON")
+    private Set<Module> dependencies = new HashSet<>();
 
     public Module(String groupId, String artifactId, String version) {
         this.groupId = groupId;
@@ -116,12 +114,25 @@ public class Module implements GraphNode,ArtifactEntity {
         this.parent = parent;
     }
 
-    public List<Module> getDependencies() {
+    @Relationship(type = "DEPENDS_ON")
+    public Set<Module> getDependencies() {
         return dependencies;
+    }
+
+    /**
+     * Setter for property 'dependencies'.
+     *
+     * @param dependencies Value to set for property 'dependencies'.
+     */
+    public void setDependencies(Set<Module> dependencies) {
+        this.dependencies = dependencies;
     }
 
     public void addDependency(Module module) {
         Objects.requireNonNull(module);
+        if (dependencies == null) {
+            dependencies = new HashSet<>();
+        }
         if(!dependencies.contains(module))
         this.dependencies.add(module);
     }

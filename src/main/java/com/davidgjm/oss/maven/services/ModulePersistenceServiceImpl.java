@@ -13,6 +13,7 @@ import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by david on 2017/3/1.
@@ -60,7 +61,7 @@ public class ModulePersistenceServiceImpl implements ModulePersistenceService {
     }
 
     private void saveDependencies(Module module) {
-        List<Module> dependencies = module.getDependencies();
+        Set<Module> dependencies = module.getDependencies();
         if (dependencies==null||dependencies.isEmpty()) return;
         dependencies.parallelStream().forEach(m ->{
             saveSingle(m);

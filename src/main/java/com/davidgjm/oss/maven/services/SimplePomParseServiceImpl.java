@@ -5,12 +5,12 @@ import com.davidgjm.oss.maven.configuration.AppConfiguration;
 import com.davidgjm.oss.maven.domain.Module;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
 import com.davidgjm.oss.maven.providers.RemoteRepositoryProvider;
+import com.davidgjm.oss.maven.support.ArtifactSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -67,25 +67,10 @@ public class SimplePomParseServiceImpl implements PomParseService {
         this.remoteRepositoryProvider = remoteRepositoryProvider;
     }
 
-    @Override
-    public Module parse(Path pomFile) {
-        logger.debug("{} - Parsing pom file: {}",getClass().getName(), pomFile);
-        Document document = doParseXml(pomFile);
-        if (document == null) {
-            throw new IllegalStateException("Failed to parse provided file: " + pomFile);
-        }
-
-        logger.debug("{} - Parsing xml document...",getClass().getName());
-
-        return doParseXmlDocument(document);
-    }
 
     @Override
     public Module parse(Module artifact) {
-        Objects.requireNonNull(artifact);
-        if (!StringUtils.hasText(artifact.getGroupId()) || !StringUtils.hasText(artifact.getArtifactId())) {
-            throw new IllegalArgumentException("The groupId and artifactId fields are required!");
-        }
+        ArtifactSupport.validate(artifact);
 
         RemotePomFile remotePomFile = remoteRepositoryProvider.getRemoteArtifactPom(artifact);
 
@@ -104,8 +89,46 @@ public class SimplePomParseServiceImpl implements PomParseService {
             }
         }
 
-        return parse(getCachedPomFile(remotePomFile));
+        return doParsePom(getCachedPomFile(remotePomFile));
     }
+
+    private Module doParseArtifact(Module artifact) {
+        ArtifactSupport.validate(artifact);
+       /*
+         * Here is how a raw artifact is parsed.
+         * A raw artifact is an artifact parsed out of parent or dependency element.
+         * The name attribute and even version attribute is missing. This method will try to resolve the missing attributes.
+         */
+
+        /*
+         * How it works:
+         * 1. It will look for the pom file in the local repository or storage.
+         * 2. It will download the pom from public repository if it's not found locally.
+         * 3. Do parsing work
+         * 4. Store the pom for future reuse
+         */
+
+        RemotePomFile remotePomFile = remoteRepositoryProvider.getRemoteArtifactPom(artifact);
+
+        /*
+         * The cached version will be checked first. If the pom is not cached, the remote file will be retrieved.
+         */
+        if (!isCached(remotePomFile)) {
+            logger.info("{} - Pom file is not cached for {}:{}",getClass().getName(), artifact.getGroupId(), artifact.getArtifactId());
+            //The file is not cached. Reading remotely.
+            try {
+                InputStream inputStream = fetchRemotePomContent(remotePomFile);
+                BufferedReader reader=new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+                saveRemotePom(remotePomFile, reader.lines().collect(Collectors.toList()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
+
+
 
     private InputStream fetchRemotePomContent(RemotePomFile pomFile) throws IOException {
         URL pomUrl = pomFile.toAbsoluteUrl();
@@ -128,8 +151,21 @@ public class SimplePomParseServiceImpl implements PomParseService {
         Files.write(cachedPomFile, lines);
     }
 
+    @Override
+    public Module parse(Path pomFile) {
+        logger.debug("{} - Parsing pom file: {}",getClass().getName(), pomFile);
+        return doParsePom(pomFile);
+    }
 
-    private Module doParseXmlDocument(Document document) {
+
+    private Module doParsePom(Path file) {
+        validateXmlFile(file);
+        Document document = null;
+        try {
+            document= getDocumentBuilder().parse(file.toFile());
+        } catch (SAXException | IOException | ParserConfigurationException e) {
+            throw new RuntimeException(e);
+        }
         Element projectElement = document.getDocumentElement();
 
         Module parent = getParent(document);
@@ -170,8 +206,6 @@ public class SimplePomParseServiceImpl implements PomParseService {
         nameOptional.ifPresent(module::setName);
     }
 
-
-
     private Optional<String> getGroupId(Element node) {
         return getChildElementText(node, "groupId");
     }
@@ -204,6 +238,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
         }
         return Optional.empty();
     }
+
     private Optional<String> getVersion(Element node) {
         NodeList versionList = node.getElementsByTagName("version");
         if (versionList.getLength() ==0) {
@@ -230,24 +265,6 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return nodeList;
     }
 
-    private Document doParseXml(Path file){
-        validateXmlFile(file);
-        try {
-            return getDocumentBuilder().parse(file.toFile());
-        } catch (SAXException | IOException | ParserConfigurationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private Document doParseXml(InputStream inputStream){
-        Objects.requireNonNull(inputStream);
-        try {
-            return getDocumentBuilder().parse(inputStream);
-        } catch (SAXException | IOException | ParserConfigurationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private Module getParent(Document document) {
         NodeList parentList = document.getElementsByTagName("parent");
         if (parentList.getLength() == 0) {
@@ -255,8 +272,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
             return null;
         }
         Element parentElement = (Element) parentList.item(0);
-        Module parent= parseArtifact(parentElement);
-        return parent;
+        return parseArtifact(parentElement);
     }
 
     private Module parseArtifact(Element node) {

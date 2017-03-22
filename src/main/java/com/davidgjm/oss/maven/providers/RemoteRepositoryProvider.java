@@ -1,6 +1,6 @@
 package com.davidgjm.oss.maven.providers;
 
-import com.davidgjm.oss.maven.domain.Module;
+import com.davidgjm.oss.maven.ArtifactEntity;
 import com.davidgjm.oss.maven.domain.RemotePomFile;
 
 import java.net.URL;
@@ -24,5 +24,5 @@ public interface RemoteRepositoryProvider extends Supplier<URL> {
      * @param artifact The artifact to be searched.
      * @return The URL to the corresponding artifact.
      */
-    RemotePomFile getRemoteArtifactPom(Module artifact);
+    RemotePomFile getRemoteArtifactPom(ArtifactEntity artifact);
 }

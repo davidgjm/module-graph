@@ -16,6 +16,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -108,7 +109,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
         setupCacheFile();
         Yaml yaml = new Yaml();
         try {
-            yaml.dump(cache, Files.newBufferedWriter(cacheFile));
+            yaml.dump(cache, Files.newBufferedWriter(cacheFile, StandardOpenOption.TRUNCATE_EXISTING));
         } catch (IOException e) {
             logger.error("Error when writing cache",e);
         }

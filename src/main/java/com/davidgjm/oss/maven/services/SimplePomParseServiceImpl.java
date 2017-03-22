@@ -70,29 +70,11 @@ public class SimplePomParseServiceImpl implements PomParseService {
 
     @Override
     public Module parse(Module artifact) {
-        ArtifactSupport.validate(artifact);
-
-        RemotePomFile remotePomFile = remoteRepositoryProvider.getRemoteArtifactPom(artifact);
-
-        /*
-         * The cached version will be checked first. If the pom is not cached, the remote file will be retrieved.
-         */
-        if (!isCached(remotePomFile)) {
-            logger.info("{} - Pom file is not cached for {}:{}",getClass().getName(), artifact.getGroupId(), artifact.getArtifactId());
-            //The file is not cached. Reading remotely.
-            try {
-                InputStream inputStream = fetchRemotePomContent(remotePomFile);
-                BufferedReader reader=new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-                saveRemotePom(remotePomFile, reader.lines().collect(Collectors.toList()));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        return doParsePom(getCachedPomFile(remotePomFile));
+        Objects.requireNonNull(artifact);
+        return doParseArtifact(artifact);
     }
 
-    private Module doParseArtifact(Module artifact) {
+    private Module doParseArtifact(ArtifactEntity artifact) {
         ArtifactSupport.validate(artifact);
        /*
          * Here is how a raw artifact is parsed.
@@ -124,7 +106,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
                 throw new RuntimeException(e);
             }
         }
-        return null;
+        return doParsePom(getCachedPomFile(remotePomFile));
     }
 
 

@@ -52,6 +52,9 @@ public class ModuleGraphAnalyzerImpl implements ModuleGraphAnalyzer{
         //dependencies are checked at all times for the time being
         analyzeDependencies(module, true);
         modulePersistenceService.save(module);
+        pool.submit(() ->{
+            cacheService.save(module);
+        });
         return module;
     }
 

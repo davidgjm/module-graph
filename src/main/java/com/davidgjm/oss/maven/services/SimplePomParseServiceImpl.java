@@ -142,6 +142,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
 
     private Module doParsePom(Path file) {
         validateXmlFile(file);
+        Module module = new Module();
         Document document = null;
         try {
             document= getDocumentBuilder().parse(file.toFile());
@@ -153,29 +154,19 @@ public class SimplePomParseServiceImpl implements PomParseService {
         Module parent = getParent(document);
 
         //sets artifact id
-        String artifactId = getArtifactId(projectElement);
-        Optional<String> groupIdOptional = getGroupId(projectElement);
-        String groupId = null;
-        if (groupIdOptional.isPresent()) {
-            groupId = groupIdOptional.get();
-        } else if (parent == null) {
-            logger.error("Group id is missing and nowhere to inherit. [{}]!", artifactId);
-            throw new IllegalStateException("Failed to get groupId for " + artifactId);
-        } else {
-            groupId = parent.getGroupId();
-        }
+        resolveArtifactId(projectElement, module);
 
+        //sets group id
+        resolveGroupId(projectElement,module, Optional.ofNullable(parent));
 
-        Module module = new Module(groupId, artifactId);
-        Optional<String> versionOptional = getVersion(projectElement);
-        versionOptional.ifPresent(module::setVersion);
+        resolveVersion(projectElement, module);
         //if version is missing from current artifact, it usually inherits from its parent
         if (parent != null) {
             module.setVersion(parent.getVersion());
         }
 
         //finds artifact name
-        setArtifactName(projectElement, module);
+        resolveArtifactName(projectElement, module);
         module.setParent(parent);
 
         //set dependencies
@@ -183,19 +174,43 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return module;
     }
 
-    private  <T extends ArtifactEntity> void setArtifactName(Element container, T module) {
+    private <T extends ArtifactEntity> T resolveArtifactName(Element container,T module) {
         Optional<String> nameOptional = getChildElementText(container, "name");
         nameOptional.ifPresent(module::setName);
+        return module;
     }
 
-    private Optional<String> getGroupId(Element node) {
-        return getChildElementText(node, "groupId");
+    private <T extends ArtifactEntity> T resolveGroupId(Element node,T module, Optional<T> parentOptional) {
+        Optional<String> groupIdOptional = getChildElementText(node, "groupId");
+        if (!parentOptional.isPresent() && !groupIdOptional.isPresent()) {//throws exception when no way to get group id
+            logger.error("Group id is missing and nowhere to inherit. [{}]!", module);
+            throw new IllegalStateException("Failed to get groupId for " + module.getArtifactId());
+        }
+        if (groupIdOptional.isPresent()) {
+            module.setGroupId(groupIdOptional.get());
+            return module;
+        } else parentOptional.ifPresent(t -> module.setGroupId(t.getGroupId()));
+        return module;
     }
-    private String getArtifactId(Element node) {
+
+    private <T extends ArtifactEntity> T resolveArtifactId(Element node, T module) {
         Optional<String> optional = getChildElementText(node, "artifactId");
-        return optional.orElseThrow(() -> new RuntimeException("No artifact id detected for element: " + node.getTagName()));
+        module.setArtifactId(optional.orElseThrow(() -> new RuntimeException("No artifact id detected for element: " + node.getTagName())));
+        return module;
     }
 
+    private <T extends ArtifactEntity> T resolveVersion(Element node, T module) {
+        NodeList versionList = node.getElementsByTagName("version");
+        if (versionList.getLength() ==0) {
+            logger.warn("No version element present for module: [{}]", module );
+            return module;
+        }
+        String version = versionList.item(0).getTextContent().trim();
+        logger.debug("Parsed artifact version: [{}]",version );
+
+        module.setVersion(version);
+        return module;
+    }
     /**
      * Finds the first descendant element text for the given element.
      * @param node The node to be searched from
@@ -221,13 +236,6 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return Optional.empty();
     }
 
-    private Optional<String> getVersion(Element node) {
-        NodeList versionList = node.getElementsByTagName("version");
-        if (versionList.getLength() ==0) {
-            return Optional.empty();
-        }
-        return Optional.of(versionList.item(0).getTextContent().trim());
-    }
 
     private NodeList parseByXpath(Document document, String exp) {
         XPath xPath = xPathFactory.newXPath();
@@ -257,16 +265,20 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return parseArtifact(parentElement);
     }
 
+    /**
+     * Parses a single artifact. An artifact can be a project, parent, dependency or even plugin.
+     * @param node The XML element in the pom.xml
+     * @return The artifact parsed out of this xml element.
+     */
     private Module parseArtifact(Element node) {
         Module module = new Module();
-        Optional<String> groupOptional = getGroupId(node);
-        groupOptional.ifPresent(module::setGroupId);
-        module.setArtifactId(getArtifactId(node).trim());
-        Optional<String> optional = getVersion(node);
-        optional.ifPresent(module::setVersion);
+        resolveGroupId(node, module, Optional.empty());
+
+        resolveArtifactId(node, module);
+        resolveVersion(node, module);
 
         //sets name
-        setArtifactName(node, module );
+        resolveArtifactName(node, module );
         return module;
     }
 

@@ -147,6 +147,7 @@ public class ModuleCacheServiceImpl implements ModuleCacheService{
         if (cacheItem == null) {
             return Optional.empty();
         }
+        cacheItem.refreshCompositeId();
         return Optional.of(cacheItem);
     }
 }

@@ -19,4 +19,8 @@ public interface ArtifactEntity {
     void setName(String name);
 
     String getName();
+
+    default boolean hasGroupId(){
+        return getGroupId()!=null && !getGroupId().isEmpty();
+    }
 }

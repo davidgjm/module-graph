@@ -1,0 +1,14 @@
+spring:
+  profiles.active: dev
+---
+spring:
+  data:
+    neo4j:
+      uri: bolt://localhost
+      username: neo4j
+      password: admin
+
+logging:
+  level:
+    root: info
+    org.springframework.data.neo4j: debug

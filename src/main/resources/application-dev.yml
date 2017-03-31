@@ -1,0 +1,4 @@
+logging:
+  level:
+    root: debug
+    org.springframework.data.neo4j: debug

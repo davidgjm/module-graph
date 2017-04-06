@@ -1,3 +1,11 @@
+application.configuration.artifact:
+  pom-cache: ${user.home}/.pom-cache
+  repositories:
+    - isLocal: true
+      path: ${user.home}/.m2/repository
+    - isLocal: false
+      path: http://repo1.maven.org/maven2
+---
 spring:
   profiles.active: dev
 ---
@@ -12,3 +20,4 @@ logging:
   level:
     root: info
     org.springframework.data.neo4j: debug
+

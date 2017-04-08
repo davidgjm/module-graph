@@ -1,5 +1,5 @@
 application.configuration.artifact:
-  pom-cache: ${user.home}/.pom-cache
+  cache-location: ${user.home}/.module-graph/pom-cache
   repositories:
     - isLocal: true
       path: ${user.home}/.m2/repository

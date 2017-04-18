@@ -28,7 +28,7 @@
 
 	<dependencyManagement>
 		<dependencies>
-            <dependency>
+			<dependency>
                 <groupId>org.neo4j</groupId>
                 <artifactId>neo4j-ogm-embedded-driver</artifactId>
                 <version>${neo4j-ogm.version}</version>
@@ -54,6 +54,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.neo4j</groupId>

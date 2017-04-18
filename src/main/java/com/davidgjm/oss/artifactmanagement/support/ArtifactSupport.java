@@ -25,6 +25,14 @@ public final class ArtifactSupport {
         return String.format("%s-%s.pom", artifactId, version);
     }
 
+    public static String getArtifactMetaDataFile(ArtifactEntity artifact) {
+        validate(artifact);
+        return String.format("%s/%s",
+                getRelativeUrlFragment(artifact.getGroupId(),artifact.getArtifactId()),
+                "maven-metadata.xml"
+                );
+    }
+
     public static String getRelativeUrlFragment(String groupId, String artifactId) {
         validateGroupId(groupId);
         validateArtifactId(artifactId);

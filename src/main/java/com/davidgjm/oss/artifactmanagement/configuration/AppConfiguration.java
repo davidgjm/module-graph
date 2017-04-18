@@ -1,6 +1,9 @@
 package com.davidgjm.oss.artifactmanagement.configuration;
 
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Path;
@@ -17,4 +20,8 @@ public class AppConfiguration {
         return Paths.get(System.getProperty("user.home"), ".model-graph");
     }
 
+    @Bean
+    public CloseableHttpClient httpClient() {
+        return HttpClients.createDefault();
+    }
 }

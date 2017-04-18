@@ -2,9 +2,12 @@ package com.davidgjm.oss.artifactmanagement.services.maven;
 
 import com.davidgjm.oss.artifactmanagement.ArtifactEntity;
 import com.davidgjm.oss.artifactmanagement.ArtifactNotFoundException;
+import com.davidgjm.oss.artifactmanagement.configuration.ArtifactRepositoryProperties;
 import com.davidgjm.oss.artifactmanagement.support.ArtifactSupport;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,30 @@ public class PomCacheServiceImpl implements PomCacheService {
 
     @Value("${application.configuration.artifact.cache-location}")
     private String cacheLocation;
+
+    private ArtifactRepositoryProperties repositoryProperties;
+    private CloseableHttpClient httpClient;
+
+    @Autowired
+    public void setRepositoryProperties(ArtifactRepositoryProperties repositoryProperties) {
+        this.repositoryProperties = repositoryProperties;
+    }
+
+    public void setHttpClient(CloseableHttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    @Override
+    public Path put(ArtifactEntity artifact) {
+        validate(artifact);
+        if (isCached(artifact)) {
+            logger.info("Artifact already cached. {}", artifact);
+            return getArtifactPath(artifact);
+        }
+
+        //TODO: to be implemented.
+        return null;
+    }
 
     @Override
     public Path find(ArtifactEntity artifact) throws ArtifactNotFoundException {
@@ -65,4 +92,5 @@ public class PomCacheServiceImpl implements PomCacheService {
             throw new IllegalStateException("Version number is required for cached artifacts!");
         }
     }
+
 }

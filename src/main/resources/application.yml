@@ -1,9 +1,9 @@
 application.configuration.artifact:
   cache-location: ${user.home}/.module-graph/pom-cache
   repositories:
-    - isLocal: true
+    - local: true
       path: ${user.home}/.m2/repository
-    - isLocal: false
+    - local: false
       path: http://repo1.maven.org/maven2
 ---
 spring:

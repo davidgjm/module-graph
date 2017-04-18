@@ -5,6 +5,7 @@ import com.davidgjm.oss.artifactmanagement.configuration.AppConfiguration;
 import com.davidgjm.oss.artifactmanagement.domain.Module;
 import com.davidgjm.oss.artifactmanagement.domain.RemotePomFile;
 import com.davidgjm.oss.artifactmanagement.maven.providers.RemoteRepositoryProvider;
+import com.davidgjm.oss.artifactmanagement.services.maven.parsers.BaseXmlParser;
 import com.davidgjm.oss.artifactmanagement.support.ArtifactSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,11 +16,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,7 +26,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -47,10 +44,10 @@ import java.util.stream.Collectors;
  */
 @Service
 @Lazy
-public class SimplePomParseServiceImpl implements PomParseService {
+public class SimplePomParseServiceImpl extends BaseXmlParser
+        implements PomParseService {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final DocumentBuilderFactory factory=DocumentBuilderFactory.newInstance();
-    private final XPathFactory xPathFactory = XPathFactory.newInstance();
     private final Path localPomCacheDirectory;
 
     private RemoteRepositoryProvider remoteRepositoryProvider;
@@ -143,12 +140,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
     private Module doParsePom(Path file) {
         validateXmlFile(file);
         Module module = new Module();
-        Document document = null;
-        try {
-            document= getDocumentBuilder().parse(file.toFile());
-        } catch (SAXException | IOException | ParserConfigurationException e) {
-            throw new RuntimeException(e);
-        }
+        Document document = parseXml(file);
         Element projectElement = document.getDocumentElement();
 
         Module parent = getParent(document);
@@ -239,14 +231,7 @@ public class SimplePomParseServiceImpl implements PomParseService {
 
 
     private NodeList parseByXpath(Document document, String exp) {
-        XPath xPath = xPathFactory.newXPath();
-        XPathExpression expression = null;
-        try {
-            expression = xPath.compile(exp);
-        } catch (XPathExpressionException e) {
-            throw new RuntimeException(e);
-        }
-
+        XPathExpression expression = buildXPath(exp);
         NodeList nodeList;
         try {
             nodeList= (NodeList) expression.evaluate(document, XPathConstants.NODESET);
@@ -311,22 +296,4 @@ public class SimplePomParseServiceImpl implements PomParseService {
         return dependencies;
     }
 
-    private void validateXmlFile(Path file) {
-        Objects.requireNonNull(file);
-        if (Files.notExists(file)) {
-            logger.error("File does not exist: {}",file );
-            throw new RuntimeException(new NoSuchFileException(file.toString()));
-        }
-        if (Files.isDirectory(file)) {
-            throw new IllegalStateException("An xml file is expected! "+file);
-        }
-        logger.debug("Provided file: [{}]",file );
-        if (!file.getFileName().endsWith("pom.xml") && !file.getFileName().toString().endsWith(".pom")) {
-            throw new IllegalArgumentException("The file is not a Maven pom.xml!");
-        }
-    }
-
-    private DocumentBuilder getDocumentBuilder() throws ParserConfigurationException {
-        return factory.newDocumentBuilder();
-    }
 }

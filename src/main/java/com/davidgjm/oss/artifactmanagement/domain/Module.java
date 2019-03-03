@@ -4,14 +4,11 @@ import com.davidgjm.oss.artifactmanagement.ArtifactEntity;
 import com.davidgjm.oss.artifactmanagement.GraphNode;
 import com.davidgjm.oss.artifactmanagement.support.ArtifactSupport;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.hibernate.validator.constraints.NotBlank;
-import org.neo4j.ogm.annotation.GraphId;
-import org.neo4j.ogm.annotation.Index;
-import org.neo4j.ogm.annotation.NodeEntity;
-import org.neo4j.ogm.annotation.Relationship;
+import org.neo4j.ogm.annotation.*;
 import org.springframework.util.StringUtils;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -22,7 +19,8 @@ import java.util.Set;
 @NodeEntity
 public class Module implements GraphNode,ArtifactEntity {
 
-    @GraphId
+    @Id
+    @GeneratedValue
     private Long id;
 
     @Index
@@ -32,6 +30,7 @@ public class Module implements GraphNode,ArtifactEntity {
     private String artifactId;
 
     private String version;
+
     @NotBlank
     @Index
     private String name;
@@ -110,7 +109,6 @@ public class Module implements GraphNode,ArtifactEntity {
         this.parent = parent;
     }
 
-    @Relationship(type = "DEPENDS_ON")
     public Set<Module> getDependencies() {
         return dependencies;
     }
